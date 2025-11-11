@@ -1,0 +1,13 @@
+{
+  "name": "com.unlimited-fairytales.googleutils",
+  "displayName": "Uft.GoogleUtils",
+  "version": "1.0.0",
+  "unity": "6000.0",
+  "description": "This is some google helpers.",
+  "author": {
+    "name": "Unlimited Fairytales",
+    "url": "https://unlimited-fairytales.com/"
+  },
+  "license": "MIT",
+  "samples": []
+}
