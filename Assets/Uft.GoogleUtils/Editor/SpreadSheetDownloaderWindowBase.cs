@@ -9,21 +9,43 @@ namespace Uft.GoogleUtils
     /// <summary>継承して各フィールドの値の初期値を入れたバージョンを用意すると便利です。</summary>
     public class SpreadsheetDownloaderWindowBase : EditorWindow
     {
-        const string TITLE = "Spreadsheet Downloader";
+        const string TITLE = "Sheet Downloader";
+
+        public static void Open<T>() where T : EditorWindow
+        {
+            var all = Resources.FindObjectsOfTypeAll<T>();
+            T window = null;
+            for (int i = 0; i < all.Length; i++)
+            {
+                if (all[i].GetType() == typeof(T))
+                {
+                    window = all[i];
+                    break;
+                }
+            }
+            if (window == null)
+            {
+                window = CreateInstance<T>();
+            }
+            window.Show();
+            window.Focus();
+        }
 
         [MenuItem("Tools/Uft.GoogleUtils/" + TITLE, priority = 21100, secondaryPriority = 10)]
-        public static void Open()
+        public static void Open() => Open<SpreadsheetDownloaderWindowBase>();
+
+        protected virtual void OnEnable()
         {
-            var window = GetWindow<SpreadsheetDownloaderWindowBase>(TITLE);
-            window.sheetUrl = "";
-            window.downloadDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-            window.outputDirectory = "Assets/";
-            window.outputFileName = "sample.csv";
-            window.overwritesExisting = false;
-            window.browserOptions = new[] { "Default browser", "chrome.exe", "msedge.exe" };
-            window.selectedBrowserIndex = 0;
-            window.timeout_sec = 15;
-            window.status = "";
+            this.titleContent.text = TITLE;
+            this.sheetUrl = "";
+            this.downloadDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+            this.outputDirectory = "Assets/";
+            this.outputFileName = "sample.csv";
+            this.overwritesExisting = false;
+            this.browserOptions = new[] { "Default browser", "chrome.exe", "msedge.exe" };
+            this.selectedBrowserIndex = 0;
+            this.timeout_sec = 15;
+            this.status = "";
         }
 
         protected string sheetUrl;
