@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.IO;
 using UnityEditor;
@@ -14,7 +16,7 @@ namespace Uft.GoogleUtils
         public static void Open<T>() where T : EditorWindow
         {
             var all = Resources.FindObjectsOfTypeAll<T>();
-            T window = null;
+            T? window = null;
             for (int i = 0; i < all.Length; i++)
             {
                 if (all[i].GetType() == typeof(T))
@@ -48,15 +50,15 @@ namespace Uft.GoogleUtils
             this.status = "";
         }
 
-        protected string sheetUrl;
-        protected string downloadDirectory;
-        protected string outputDirectory;
-        protected string outputFileName;
+        protected string? sheetUrl;
+        protected string? downloadDirectory;
+        protected string? outputDirectory;
+        protected string? outputFileName;
         protected bool overwritesExisting;
-        protected string[] browserOptions;
+        protected string[]? browserOptions;
         protected int selectedBrowserIndex;
         protected int timeout_sec;
-        protected string status;
+        protected string? status;
 
         bool _isRunning = false;
 
@@ -84,20 +86,22 @@ namespace Uft.GoogleUtils
                 {
                     async void taskVoid()
                     {
+                        if (this._isRunning) return;
+                        SpreadsheetDownloader? downloader = null;
                         try
                         {
                             this._isRunning = true;
                             this.status = "ダウンロード中";
                             Debug.Log(this.status);
                             this.Repaint();
-                            var downloader = new SpreadsheetDownloader(
-                                this.downloadDirectory,
-                                this.outputDirectory,
-                                this.outputFileName,
-                                this.overwritesExisting,
-                                this.selectedBrowserIndex == 0 ? null : this.browserOptions[this.selectedBrowserIndex],
+                            downloader = new SpreadsheetDownloader(
+                                this.downloadDirectory!,
+                                this.outputDirectory!,
+                                this.outputFileName!,
+                                this.overwritesExisting!,
+                                this.selectedBrowserIndex == 0 ? null : this.browserOptions![this.selectedBrowserIndex],
                                 TimeSpan.FromSeconds(this.timeout_sec));
-                            var csvUrl = SpreadsheetDownloader.GetCsvExportUrl(this.sheetUrl);
+                            var csvUrl = SpreadsheetDownloader.GetCsvExportUrl(this.sheetUrl!);
                             var destPath = await downloader.DownloadCsvAsync(csvUrl);
                             this.status = $"✅ ダウンロード完了: {destPath}";
                             Debug.Log(this.status);
@@ -112,6 +116,7 @@ namespace Uft.GoogleUtils
                         {
                             this._isRunning = false;
                             this.Repaint();
+                            downloader?.Dispose();
                         }
                     }
                     taskVoid();

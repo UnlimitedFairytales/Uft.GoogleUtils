@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -7,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Uft.GoogleUtils
 {
-    public class SpreadsheetDownloader
+    public class SpreadsheetDownloader : IDisposable
     {
         // https://docs.google.com/spreadsheets/d/<ID>/edit?gid=0#gid=<GID>
         // ↓
@@ -32,7 +34,10 @@ namespace Uft.GoogleUtils
             get => this._downloadDirectory;
             set
             {
-                if (!Directory.Exists(value)) throw new ArgumentException($"Invalid path: {value}", nameof(value));
+                if (!Directory.Exists(value))
+                {
+                    throw new ArgumentException($"Invalid path: {value}", nameof(value));
+                }
                 this._downloadDirectory = value;
             }
         }
@@ -40,14 +45,23 @@ namespace Uft.GoogleUtils
         public string OutputFileName { get; private set; }
         public string OutputFilePath => Path.Combine(this.OutputDirectory, this.OutputFileName);
         public bool OverwritesExisting { get; private set; }
-        public string LaunchCommand { get; private set; }
+        public string? LaunchCommand { get; private set; }
         public TimeSpan Timeout { get; set; }
 
-        public SpreadsheetDownloader(string downloadDirectory, string outputDirectory, string outputFileName, bool overwritesExisting, string launchCommand, TimeSpan timeout)
+        readonly CancellationTokenSource clientLifetimeTokenSource = new();
+
+        public SpreadsheetDownloader(string downloadDirectory, string outputDirectory, string outputFileName, bool overwritesExisting, string? launchCommand, TimeSpan timeout)
         {
-            this.DownloadDirectory = downloadDirectory;
-            this.OutputDirectory = outputDirectory ?? throw new ArgumentNullException(nameof(outputDirectory));
-            this.OutputFileName = outputFileName ?? throw new ArgumentNullException(nameof(outputFileName));
+            // HACK: Unity6 + C#9.0 の nullable解析が上手く行かないので、プロパティと同じ記述を書く
+            // this.DownloadDirectory = downloadDirectory;
+            if (!Directory.Exists(downloadDirectory))
+            {
+                throw new ArgumentException($"Invalid path: {downloadDirectory}", nameof(downloadDirectory));
+            }
+            this._downloadDirectory = downloadDirectory;
+
+            this.OutputDirectory = outputDirectory;
+            this.OutputFileName = outputFileName;
             this.OverwritesExisting = overwritesExisting;
             this.LaunchCommand = launchCommand;
             this.Timeout = timeout;
@@ -92,9 +106,8 @@ namespace Uft.GoogleUtils
             // NOTE: .NET と ファイル更新日時の誤差を吸収
             var startTime_utc = DateTime.UtcNow.AddSeconds(-1);
             var timeout = this.Timeout + TimeSpan.FromSeconds(+1);
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(this.clientLifetimeTokenSource.Token, cancellationToken);
             cts.CancelAfter(timeout);
-            cancellationToken = cts.Token;
 
             // NOTE: おまけ
             if (startTime_utc.ToString("yyyyMMdd") == "20380119") throw new Exception("今日は2038年問題(2038-01-19T03:14:07Z)です。有給取得したらいかがですか？");
@@ -103,13 +116,14 @@ namespace Uft.GoogleUtils
             {
                 while (true)
                 {
-                    await Task.Delay(1000, cancellationToken);
+                    await Task.Delay(1000, cts.Token);
                     var csvFiles = Directory
                         .GetFiles(downloadDirectory, "*.csv")
-                        .Where(csv => !File.Exists(csv + ".crdownload") && File.GetLastWriteTimeUtc(csv) > startTime_utc);
-                    if (0 < csvFiles.Count())
+                        .Where(csv => !File.Exists(csv + ".crdownload") && File.GetLastWriteTimeUtc(csv) > startTime_utc)
+                        .ToArray();
+                    if (0 < csvFiles.Length)
                     {
-                        await Task.Delay(1000, cancellationToken); // NOTE: 追加で１秒待つ
+                        await Task.Delay(1000, cts.Token); // NOTE: 追加で１秒待つ
                         return csvFiles
                             .OrderByDescending(csv => File.GetLastWriteTimeUtc(csv).Ticks)
                             .First();
@@ -122,11 +136,21 @@ namespace Uft.GoogleUtils
                 {
                     throw new OperationCanceledException(ex.Message, ex, cancellationToken);
                 }
+                else if (this.clientLifetimeTokenSource.IsCancellationRequested)
+                {
+                    throw new OperationCanceledException("Client is disposed.", ex, this.clientLifetimeTokenSource.Token);
+                }
                 else
                 {
                     throw new TimeoutException($"The request was canceled due to the configured Timeout of {this.Timeout.TotalSeconds} seconds elapsing.", ex);
                 }
             }
+        }
+
+        public void Dispose()
+        {
+            this.clientLifetimeTokenSource.Cancel();
+            this.clientLifetimeTokenSource.Dispose();
         }
     }
 }
