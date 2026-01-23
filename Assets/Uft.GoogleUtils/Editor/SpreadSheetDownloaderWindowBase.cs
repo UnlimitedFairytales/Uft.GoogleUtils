@@ -60,6 +60,8 @@ namespace Uft.GoogleUtils
         protected int timeout_sec;
         protected string? status;
 
+        protected Color backGroundColor;
+
         bool _isRunning = false;
 
         protected virtual void OnGUI()
@@ -68,6 +70,8 @@ namespace Uft.GoogleUtils
             this.maxSize = new Vector2(1800, 280);
             using (new EditorGUI.DisabledGroupScope(this._isRunning))
             {
+                EditorGUI.DrawRect(new Rect(0, 0, this.position.width, this.position.height), backGroundColor);
+
                 GUILayout.Label("ブラウザ経由で Spreadsheet を CSV ダウンロードします", EditorStyles.boldLabel);
 
                 GUILayout.Space(10);
