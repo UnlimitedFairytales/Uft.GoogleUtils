@@ -10,7 +10,7 @@ namespace Uft.GoogleUtils
     {
         const string TITLE = "Multi Sheet Downloader (DerivedSample)";
 
-        [MenuItem("Tools/Uft.GoogleUtils/" + TITLE, priority = 21100, secondaryPriority = 40)]
+        [MenuItem("Tools/Uft.GoogleUtils/" + TITLE, priority = 21062000 + 715, secondaryPriority = 40)]
         public static void Open2() => Open<MultiSpreadsheetDownloaderWindowDerivedSample>();
 
         protected override void OnEnable()

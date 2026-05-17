@@ -42,7 +42,7 @@ namespace Uft.GoogleUtils
             window.Focus();
         }
 
-        [MenuItem("Tools/Uft.GoogleUtils/" + TITLE, priority = 21100, secondaryPriority = 30)]
+        [MenuItem("Tools/Uft.GoogleUtils/" + TITLE, priority = 21062000 + 715, secondaryPriority = 30)]
         public static void Open() => Open<MultiSpreadsheetDownloaderWindowBase>();
 
         protected virtual void OnEnable()
